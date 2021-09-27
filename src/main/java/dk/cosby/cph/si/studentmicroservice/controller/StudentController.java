@@ -8,10 +8,13 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import dk.cosby.cph.si.studentmicroservice.exception.StudentNotFoundException;
 import dk.cosby.cph.si.studentmicroservice.model.Students;
 import dk.cosby.cph.si.studentmicroservice.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
@@ -27,9 +30,16 @@ public class StudentController {
     StudentRepository repo;
 
     @GetMapping("/all")
-    public List<Students> retrieveAllStudents()
+    public CollectionModel<EntityModel<Students>> retrieveAllStudents()
     {
-        return repo.findAll();
+        CollectionModel<Students> studentCollection = CollectionModel.of(repo.findAll());
+        List<EntityModel<Students>> studentList = repo.findAll().stream().map(student ->
+                        EntityModel.of(student,
+                                linkTo(methodOn(StudentController.class).retrieveStudent(student.getId())).withSelfRel(),
+                                linkTo(methodOn(StudentController.class).retrieveAllStudents()).withRel("All Students")))
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(studentList, linkTo(methodOn(StudentController.class).retrieveAllStudents()).withSelfRel());
     }
 
     // This is the only method, which returns hyperlinks, for now
